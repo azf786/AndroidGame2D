@@ -10,6 +10,17 @@ import android.view.SurfaceView;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 
+import com.example.androidgame2d.graphics.SpriteSheet;
+import com.example.androidgame2d.object.Circle;
+import com.example.androidgame2d.object.Enemy;
+import com.example.androidgame2d.object.Joystick;
+import com.example.androidgame2d.object.Player;
+import com.example.androidgame2d.object.Spell;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 /**
  * Game manages all objects in the game and is responsible for updating and rendering
  * all objects on the screen
@@ -18,6 +29,8 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback {
     private final Joystick joystick;
     private GameLoop gameLoop;
     private Player player;
+    private List<Enemy> enemyList;
+    private List<Spell> spellList;
     public Game(Context context) {
         super(context);
 
@@ -25,11 +38,14 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback {
         SurfaceHolder surfaceHolder = getHolder();
         surfaceHolder.addCallback(this);
 
-        // Initialize game objects
-        joystick = new Joystick(250, 850, 70, 40);
-        player = new Player(getContext(), 2*500, 500, 30);
+        SpriteSheet spriteSheet = new SpriteSheet(getContext());
 
+        // Initialize game objects
+        joystick = new Joystick(350, 1100, 90, 60);
+        player = new Player(getContext(), 2*500, 500, 30, joystick, spriteSheet.getPlayerSprite());
         gameLoop = new GameLoop(this, surfaceHolder);
+        enemyList = new ArrayList<>();
+        spellList = new ArrayList<>();
 
         setFocusable(true);
     }
@@ -79,6 +95,10 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback {
 
         joystick.draw(canvas);
         player.draw(canvas);
+
+        for (Enemy enemy : enemyList) {
+            enemy.draw(canvas);
+        }
     }
 
     public void drawUPS(Canvas canvas) {
@@ -101,6 +121,26 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback {
 
     public void update() {
         joystick.update();
-        player.update(joystick);
+
+        player.update();
+
+        // Spawn enemy
+        if (Enemy.readyToSpawn()) {
+            enemyList.add(new Enemy(getContext(), player));
+        }
+
+        // Update state of each enemy
+        for (Enemy enemy : enemyList) {
+            enemy.update();
+        }
+        
+        // Check for collision
+        Iterator<Enemy> enemyIterator = enemyList.iterator();
+        while (enemyIterator.hasNext()) {
+            if (Circle.isColliding(enemyIterator.next(), player)) {
+                //remove enemy
+                enemyIterator.remove();
+            }
+        }
     }
 }
